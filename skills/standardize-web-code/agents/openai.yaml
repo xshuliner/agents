@@ -1,0 +1,4 @@
+interface:
+  display_name: "Web 代码规范化"
+  short_description: "按框架统一 Web、Node 与全栈项目的代码规范"
+  default_prompt: "使用 $standardize-web-code 识别当前项目框架，并按适用规则统一代码结构、命名与质量标准。"
