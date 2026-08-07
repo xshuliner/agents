@@ -7,8 +7,9 @@
 | Skill | 用途 |
 | --- | --- |
 | `standardize-web-code` | 统一 Web、Node.js 与全栈项目的命名、模块组织、类型、安全、无障碍和验证方式，覆盖 Vue、Nuxt、React、Next.js、Express 等常见技术栈。 |
-| `worklog` | 从 Git 提交、最近修改文件、编辑器记录和 Shell 历史中汇总工作内容，生成日报或周报。 |
-| `git-commit` | 仅基于 Git 暂存区内容生成符合项目历史规范的提交信息并执行提交，避免误提交未暂存改动。 |
+| `cocos-creator-v3` | 提供 Cocos Creator 3.8 游戏引擎的全面开发指导，涵盖组件系统、生命周期、事件系统、资源管理、tween 缓动、对象池、UI、物理碰撞及可试玩广告优化。 |
+| `git-commit` | 仅基于 Git 暂存区内容生成符合项目历史规范的提交信息并执行提交，避免误提交未暂存改动。不校验分支，main/master 等保护分支也可直接提交。 |
+| `skill-creator` | 用于创建新 Skill 或更新既有 Skill 的指导，帮助把领域知识、工作流和工具集成封装为可复用的 Skill 包。 |
 
 ## 使用
 
@@ -17,8 +18,9 @@
 例如：
 
 - 让 Codex 重构或规范 Web 项目代码时，会使用 `standardize-web-code`。
-- 说“写日报”“生成周报”或“总结一下今天做了什么”时，会使用 `worklog`。
+- 编写或重构 Cocos Creator 3.x TypeScript 代码、实现游戏功能、优化性能/包体大小时，会使用 `cocos-creator-v3`。
 - 说“提交代码”“commit 一下”时，会使用 `git-commit`。
+- 说“创建一个 Skill”“把这个流程封装成 Skill”时，会使用 `skill-creator`。
 
 ## 与 Claude Code 复用
 
@@ -35,16 +37,23 @@ ln -s ~/.agents/skills ~/.claude/skills
 
 ```text
 skills/
+├── cocos-creator-v3/
+│   ├── SKILL.md
+│   └── references/
+│       ├── framework/
+│       ├── language/
+│       └── review/
 ├── git-commit/
 │   └── SKILL.md
-├── standardize-web-code/
+├── skill-creator/
 │   ├── SKILL.md
-│   ├── agents/
-│   └── references/
-└── worklog/
+│   ├── LICENSE.txt
+│   ├── references/
+│   └── scripts/
+└── standardize-web-code/
     ├── SKILL.md
-    ├── references/
-    └── scripts/
+    ├── agents/
+    └── references/
 ```
 
 ## 维护约定
