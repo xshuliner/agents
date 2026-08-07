@@ -1,6 +1,6 @@
 ---
 name: git-commit
-description: 当用户表达「提交代码」「commit 一下」「提交本次修改」「提交并 push」「提交并打 tag」等把修改入库的意图时，必须启用本 skill。仅检查并提交 Git 暂存区中的变更，严格依据 staged diff 生成符合项目历史规范、包含 type、scope 与 emoji 的 commit message；不得读取、描述、暂存或提交未暂存变更。
+description: 当用户表达「提交代码」「commit 一下」「提交本次修改」「提交并 push」「提交并打 tag」等把修改入库的意图时，必须启用本 skill。默认只检查并提交 Git 暂存区中的变更；暂存区为空时，先询问用户是否将全部修改加入暂存区，仅在用户明确同意后执行 git add -A。严格依据 staged diff 生成符合项目历史规范、包含 type、scope 与 emoji 的 commit message。不校验分支，main/master 等保护分支也可直接提交。
 ---
 
 # Git Commit
@@ -12,10 +12,10 @@ description: 当用户表达「提交代码」「commit 一下」「提交本次
 1. 只提交 `git diff --cached` 展示的内容。
 2. 只依据 staged diff 判断改动意图、`type`、`scope`、主题和 body。
 3. 不读取 `git diff`（未暂存 diff），不根据未暂存文件名或内容推断、补充或修正提交描述。
-4. 不运行 `git add`，不自动暂存任何文件或 hunks。未进入暂存区即视为用户不准备提交。
+4. 暂存区非空时不运行 `git add`，不追加暂存任何文件或 hunks。暂存区为空时，必须先询问用户是否将全部修改加入暂存区；只有用户明确同意后才运行一次 `git add -A`，不得推定同意。
 5. 不在 commit message 或最终改动摘要中描述未暂存内容。必要时只能说明“仍有未暂存变更，未纳入本次提交”。
-6. 暂存区为空时不创建 commit；直接说明“暂存区没有可提交的变更”。除非用户明确要求，否则不创建空提交。
-7. 不修改、格式化、删除或恢复工作区文件；本 skill 只执行提交相关的只读检查与 `git commit`。
+6. 用户拒绝暂存全部修改，或 `git add -A` 后暂存区仍为空时，不创建 commit；说明没有可提交的暂存变更。除非用户明确要求，否则不创建空提交。
+7. 除经用户明确授权的 `git add -A` 外，不修改、格式化、删除或恢复工作区文件；本 skill 只执行提交相关的检查、该次授权暂存与 `git commit`。
 8. 不使用 `--no-verify`、`--no-gpg-sign`，也不绕过失败的 hook 或签名。
 
 `git status --short` 只用于识别 staged/unstaged 状态和提交后复核，不得把其中的未暂存部分作为提交描述依据。
@@ -34,7 +34,7 @@ git status --short
 
 如果不在 Git 仓库中，停止并说明。
 
-若当前分支为 `main`、`master`、`develop`、`release/*`、`hotfix/*` 等通常受保护的分支，先让用户选择切换新分支、仍在当前分支提交或取消。不要擅自切换或创建分支。
+当前分支为 `main`、`master`、`develop`、`release/*`、`hotfix/*` 等通常受保护的分支时，无需询问，直接在当前分支提交。任何情况下都不要擅自切换或创建分支，除非用户明确要求。
 
 ### 2. 读取暂存区
 
@@ -47,9 +47,22 @@ git diff --cached --name-status
 git diff --cached
 ```
 
-- `git diff --cached --quiet` 返回 0：暂存区为空，停止。
+- `git diff --cached --quiet` 返回 0：暂存区为空，先告知用户当前没有暂存内容，再询问是否将全部修改加入暂存区。此时暂停后续流程并等待用户回答，不要在同一轮擅自暂存或提交。
 - 返回 1：继续检查 staged diff。
 - 其他返回码：视为 Git 错误，停止并说明。
+
+用户明确同意将全部修改加入暂存区后，运行：
+
+```bash
+git add -A
+git diff --cached --quiet
+```
+
+- 第二次 `git diff --cached --quiet` 返回 1：从本步骤开头重新读取完整的 stat、name-status 和 staged diff，再继续后续流程。
+- 返回 0：说明加入暂存区后仍无可提交变更，停止且不创建空提交。
+- 其他返回码：视为 Git 错误，停止并说明。
+
+用户拒绝、取消或未明确同意时，不运行 `git add`，停止提交流程。不得把“提交”“继续”等含糊回复解释为同意暂存全部修改；必须得到对“将全部修改加入暂存区”这一操作的明确确认。
 
 必须完整理解 staged diff，不能只看文件名或统计信息猜测。对于二进制文件，可结合 staged 文件名、属性和可获得的暂存区元数据作最小必要判断，但不得转而读取未暂存版本补充描述。
 
