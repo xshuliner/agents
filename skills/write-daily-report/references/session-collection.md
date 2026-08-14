@@ -53,9 +53,9 @@
 | Claude Code | `~/.claude/projects/**/*.jsonl` | 每条记录的 `cwd` + `gitBranch` | sessionId |
 | Pi Agent | `~/.pi/agent/sessions/**.jsonl` | 首行 header 的 `cwd` | session.id |
 | TeleAgent | `~/.local/share/TeleAgent/memory/daily-log/YYYY-MM-DD.md` | 无 cwd，按 ISO 时间戳过滤 | daily-log 日期 |
-| Cursor | `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb` | `composerHeaders.value.workspaceIdentifier.uri.fsPath` | composerId |
-| Trae | `~/Library/Application Support/Trae/User/workspaceStorage/<id>/chatSessions/*.json` | workspace.json → folder URI | session.sessionId |
-| Qoder | `~/Library/Application Support/Qoder/User/workspaceStorage/<id>/chatSessions/*.json` | workspace.json → folder URI | session.sessionId |
+| Cursor | macOS `~/Library/Application Support/Cursor`；Windows `%APPDATA%\\Cursor` | `composerHeaders.value.workspaceIdentifier.uri.fsPath` | composerId |
+| Trae | macOS `~/Library/Application Support/Trae`；Windows `%APPDATA%\\Trae` | workspace.json → folder URI | session.sessionId |
+| Qoder | macOS `~/Library/Application Support/Qoder`；Windows `%APPDATA%\\Qoder` | workspace.json → folder URI | session.sessionId |
 
 ## Codex 采集
 
@@ -140,7 +140,7 @@ python3 scripts/collect_cursor_sessions.py \
 
 Cursor 把全局聊天索引与消息气泡存在 WAL-mode SQLite：
 
-- 路径：`~/Library/Application Support/Cursor/User/globalStorage/state.vscdb`（环境变量 `CURSOR_HOME` 可覆盖）
+- 路径：macOS `~/Library/Application Support/Cursor/User/globalStorage/state.vscdb`，Windows `%APPDATA%\\Cursor\\User\\globalStorage\\state.vscdb`（环境变量 `CURSOR_HOME` 或 `--cursor-home` 可覆盖）
 - 表 `composerHeaders`：每条聊天一行，含 `composerId`、`createdAt`、`lastUpdatedAt`、`isSubagent`、`value(JSON)`
 - `value.workspaceIdentifier.uri.fsPath` 给出该聊天对应的真实项目路径 → 作为 cwd 白名单依据
 - `value.name` 是用户命名；draft 仅 `subtitle`（首条消息片段）
@@ -167,8 +167,8 @@ python3 scripts/collect_qoder_sessions.py \
 
 两者都基于 `vscode_fork_common.py` 共享解析逻辑：
 
-- Trae 默认数据目录：`~/Library/Application Support/Trae`（`TRAE_HOME` 可覆盖；脚本同时探测 `Trae CN`、`Trae-CN` 等变体）
-- Qoder 默认数据目录：`~/Library/Application Support/Qoder`（`QODER_HOME` 可覆盖）
+- Trae 默认数据目录：macOS `~/Library/Application Support/Trae`，Windows `%APPDATA%\\Trae`（`TRAE_HOME` 可覆盖；脚本同时探测 `Trae CN`、`Trae-CN` 等变体）
+- Qoder 默认数据目录：macOS `~/Library/Application Support/Qoder`，Windows `%APPDATA%\\Qoder`（`QODER_HOME` 可覆盖）
 - 会话文件：`<app>/User/workspaceStorage/<workspace-id>/chatSessions/<sessionId>.json`
   - `workspace.json` 给 `folder` URI（`file://…`），反解得到 cwd 用于白名单
   - 每条 session 的 `requests[]` 含 `timestamp(ms)` + `message.text` + `response[*].value`，分别对应 user/assistant

@@ -52,6 +52,7 @@ from collector_common import (
     redact,
     truncate_messages,
 )
+from platform_paths import app_homes, file_uri_to_path
 
 
 def candidate_workspace_homes(app_home: Path) -> list[Path]:
@@ -90,10 +91,7 @@ def read_workspace_folder(workspace_json: Path) -> str | None:
     folder = data.get("folder")
     if not isinstance(folder, str):
         return None
-    if folder.startswith("file://"):
-        from urllib.parse import unquote
-        return unquote(folder[len("file://"):])
-    return folder
+    return file_uri_to_path(folder)
 
 
 def extract_user_text(message: dict[str, Any]) -> str:
@@ -294,8 +292,5 @@ def collect_global_state_bubbles(
     return sessions
 
 
-def resolve_app_home(env_var: str, default_dirname: str) -> Path:
-    raw = os.environ.get(env_var)
-    if raw:
-        return Path(raw).expanduser().resolve()
-    return (Path.home() / "Library" / "Application Support" / default_dirname).expanduser().resolve()
+def resolve_app_homes(env_var: str, default_dirname: str) -> list[Path]:
+    return [path.resolve() for path in app_homes(env_var, default_dirname)]

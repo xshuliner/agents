@@ -7,6 +7,19 @@ description: 将用户提供的工作记录，或按用户批准的工作目录�
 
 把原始工作信息整理成让读者能快速判断"目标是什么、做了什么、做到什么程度、有什么风险、下一步是什么"的报告。
 
+## 首次使用与可移植性
+
+此 skill 随目录内的脚本和 references 一起分发；不要单独复制 `SKILL.md`。接收者安装 `.skill` 包后，首次需要自动采集本地会话时，先运行：
+
+```text
+python scripts/self_check.py
+```
+
+- 要求 Python 3.9+；Codex worktree 过滤另需 Git。没有对应客户端或本地记录时跳过该来源，不影响用户直接提供工作材料生成报告。
+- Cursor、Trae、Qoder 自动探测 macOS 的 `~/Library/Application Support/<App>` 和 Windows 的 `%APPDATA%\\<App>`；优先接受 `CURSOR_HOME`、`TRAE_HOME`、`QODER_HOME` 显式覆盖。
+- TeleAgent 自动探测 Windows 的 `%APPDATA%\\TeleAgent`，在 macOS/Linux 保持 `~/.local/share/TeleAgent`；可用 `TELEAGENT_HOME`、`TELEAGENT_DIR` 或 `TELEAGENT_DAILY_LOG_DIR` 覆盖。
+- Windows 命令可使用已安装的 `python` 或 Python Launcher 的 `py -3` 替换文档中的 `python3`。路径带空格时始终加引号。
+
 ## 两种周期模式
 
 | 模式 | 时间窗 | 默认区块标题（中文） |

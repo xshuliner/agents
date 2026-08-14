@@ -44,14 +44,15 @@ from collector_common import (
     resolve_roots_or_empty,
     truncate_messages,
 )
+from platform_paths import app_homes
 
 
 THINK_RE = re.compile(r"<think>.*?</think>\s*", re.DOTALL)
 BUBBLE_KEY_PREFIX = "bubbleId:"
 
 
-def default_cursor_home() -> Path:
-    return Path(os.environ.get("CURSOR_HOME", "~/Library/Application Support/Cursor"))
+def default_cursor_homes() -> list[Path]:
+    return app_homes("CURSOR_HOME", "Cursor")
 
 
 def copy_state_db(cursor_home: Path, temp_dir: Path) -> Path | None:
@@ -243,7 +244,7 @@ def main() -> int:
     ))
     parser.add_argument("--cursor-home", default=None,
                         help="Cursor data dir (default: $CURSOR_HOME or "
-                             "~/Library/Application Support/Cursor).")
+                             "the platform default, including %%APPDATA%%\\Cursor on Windows).")
     args = parser.parse_args()
     try:
         start_date, end_date = resolve_range(args)
@@ -254,16 +255,16 @@ def main() -> int:
     start, end = local_bounds(start_date, end_date)
     roots = resolve_roots_or_empty(args)
 
-    cursor_home = (
-        Path(args.cursor_home).expanduser().resolve()
-        if args.cursor_home
-        else default_cursor_home().expanduser().resolve()
-    )
+    cursor_homes = [Path(args.cursor_home).expanduser().resolve()] if args.cursor_home else [
+        path.resolve() for path in default_cursor_homes()
+    ]
 
     sessions: list[dict[str, Any]] = []
     with tempfile.TemporaryDirectory(prefix="daily-report-cursor-") as tmp:
-        db_copy = copy_state_db(cursor_home, Path(tmp))
-        if db_copy is not None:
+        for cursor_home in cursor_homes:
+            db_copy = copy_state_db(cursor_home, Path(tmp))
+            if db_copy is None:
+                continue
             try:
                 conn = open_readonly(db_copy)
             except sqlite3.Error as exc:
@@ -281,7 +282,7 @@ def main() -> int:
 
     emit_output(
         "cursor", start_date, end_date, start, roots, args.no_filter, sessions,
-        extra={"cursorHome": str(cursor_home)},
+        extra={"cursorHomes": [str(path) for path in cursor_homes]},
     )
     return 0
 

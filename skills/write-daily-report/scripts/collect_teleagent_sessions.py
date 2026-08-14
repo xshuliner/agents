@@ -25,6 +25,7 @@ from collector_common import (
     resolve_range,
     resolve_roots_or_empty,
 )
+from platform_paths import app_homes
 
 
 ENTRY_RE = re.compile(r"^-\s*\[(?P<ts>[^\]]+)\]\s*(?P<text>.+?)\s*$")
@@ -69,11 +70,8 @@ def main() -> int:
     parser = add_common_args(argparse.ArgumentParser(
         description="Collect TeleAgent daily-log entries within a local-date window."
     ))
-    parser.add_argument(
-        "--teleagent-home",
-        default=os.environ.get("TELEAGENT_HOME",
-                  os.environ.get("TELEAGENT_DIR", "~/.local/share/TeleAgent")),
-    )
+    parser.add_argument("--teleagent-home", default=None,
+                        help="TeleAgent data dir (default: override or platform default).")
     parser.add_argument("--daily-log-dir", default=os.environ.get("TELEAGENT_DAILY_LOG_DIR"))
     args = parser.parse_args()
     try:
@@ -86,22 +84,30 @@ def main() -> int:
     start, end = local_bounds(start_date, end_date)
     roots = resolve_roots_or_empty(args)
 
-    teleagent_home = Path(args.teleagent_home).expanduser().resolve()
-    log_dir = (
+    teleagent_homes = [Path(args.teleagent_home).expanduser().resolve()] if args.teleagent_home else app_homes(
+        "TELEAGENT_HOME", "TeleAgent"
+    )
+    if not os.environ.get("TELEAGENT_HOME") and not os.environ.get("TELEAGENT_DIR") and os.name != "nt":
+        teleagent_homes = [Path("~/.local/share/TeleAgent").expanduser()]
+    if os.environ.get("TELEAGENT_DIR") and not os.environ.get("TELEAGENT_HOME"):
+        teleagent_homes = [Path(os.environ["TELEAGENT_DIR"])]
+    log_dirs = [
         Path(args.daily_log_dir).expanduser().resolve()
         if args.daily_log_dir
-        else teleagent_home / "memory" / "daily-log"
-    )
+        else home.expanduser().resolve() / "memory" / "daily-log"
+        for home in teleagent_homes
+    ]
 
     days: list[dict[str, Any]] = []
     all_entries: list[dict[str, Any]] = []
-    for log_date, log_file in iter_log_files(log_dir, start_date, end_date):
-        entries = collect_file(log_file, log_date, start, end, max(200, args.max_text_chars))
-        if not entries:
-            continue
-        days.append({"date": log_date.isoformat(), "file": str(log_file),
-                     "entryCount": len(entries), "entries": entries})
-        all_entries.extend(entries)
+    for log_dir in log_dirs:
+        for log_date, log_file in iter_log_files(log_dir, start_date, end_date):
+            entries = collect_file(log_file, log_date, start, end, max(200, args.max_text_chars))
+            if not entries:
+                continue
+            days.append({"date": log_date.isoformat(), "file": str(log_file),
+                         "entryCount": len(entries), "entries": entries})
+            all_entries.extend(entries)
 
     sessions: list[dict[str, Any]] = []
     if all_entries:
@@ -111,7 +117,7 @@ def main() -> int:
             cwd=None,
             messages=all_entries,
             truncated=False,
-            source=str(log_dir),
+            source=",".join(str(log_dir) for log_dir in log_dirs),
             first_activity=parse_timestamp(all_entries[0]["timestamp"]),
             last_activity=parse_timestamp(all_entries[-1]["timestamp"]),
         ))
@@ -119,7 +125,7 @@ def main() -> int:
     emit_output(
         "teleagent", start_date, end_date, start, roots, args.no_filter, sessions,
         extra={
-            "dailyLogDir": str(log_dir),
+            "dailyLogDirs": [str(log_dir) for log_dir in log_dirs],
             "daysWithEntries": len(days),
             "totalEntries": len(all_entries),
             "days": days,
